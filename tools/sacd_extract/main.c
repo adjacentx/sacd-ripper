@@ -93,6 +93,7 @@ static struct opts_s
     int            logging;  // if 1 save logs in a file
     int            id3_tag_mode; // id3_tag_mode;  // 0=no id3 inserted; 1 or 3 =default id3 v2.3; 2=miminal id3v2.3 tag; 4=id3v2.4;5=id3v2.4 minimal
     int            version;
+    int            concurrent;
 } opts;
 
 scarletbook_handle_t *handle;
@@ -148,9 +149,9 @@ static int parse_options(int argc, char *argv[])
 
 
 #ifdef SECTOR_LIMIT
-    static const char options_string[] = "2mepszkaAbIcCvi:o:y:t:P?";
+    static const char options_string[] = "2mepszt:kIcCo:y:PAabvi:?u";
 #else
-    static const char options_string[] = "2mepszkaAbIwcCvi:o:y:t:P?";
+    static const char options_string[] = "2mepszt:kIwcCo:y:PAabvi:?u";
 #endif
 
     static const struct option options_table[] = {
@@ -160,21 +161,22 @@ static int parse_options(int argc, char *argv[])
         {"output-dsdiff", no_argument, NULL, 'p'},
         {"output-dsf", no_argument, NULL, 's'},
         {"dsf-nopad", no_argument, NULL, 'z'},
+        {"select-track",required_argument, NULL,'t'},
         {"concatenate", no_argument, NULL, 'k'},
-        {"artist", no_argument, NULL, 'A'},
-        {"performer", no_argument, NULL, 'a'},
-        {"pauses", no_argument, NULL, 'b'},
         {"output-iso", no_argument, NULL, 'I'},
 #ifndef SECTOR_LIMIT
         {"concurrent", no_argument, NULL, 'w'}, 
 #endif
         {"convert-dst", no_argument, NULL, 'c'},
         {"export-cue", no_argument, NULL, 'C'},
-        {"version", no_argument, NULL, 'v'},
-        {"input", required_argument, NULL, 'i'},
         {"output-dir", required_argument, NULL, 'o'},
         {"output-dir-conc", required_argument, NULL, 'y'},
         {"print", no_argument, NULL, 'P'},
+        {"artist", no_argument, NULL, 'A'},
+        {"performer", no_argument, NULL, 'a'},
+        {"pauses", no_argument, NULL, 'b'},
+        {"version", no_argument, NULL, 'v'},
+        {"input", required_argument, NULL, 'i'},                
         {"help", no_argument, NULL, '?'},
         {"usage", no_argument, NULL, 'u'},
         {NULL, 0, NULL, 0}};
@@ -251,7 +253,7 @@ static int parse_options(int argc, char *argv[])
             opts.output_iso = 1;
             break;
 		case 'w':
-            //opts.concurrent = 1;  // do nothing. The program already makes all required operations in multiple steps
+            opts.concurrent = 1;  // do nothing. The program already makes all required operations in multiple steps
             break;	
         case 'c': opts.convert_dst = 1; break;
         case 'C': opts.export_cue_sheet = 1; break;
@@ -427,6 +429,7 @@ static void init(void)
     opts.select_tracks      = 0;
     opts.logging            = 0;
     opts.id3_tag_mode       = 4; // default id3v2. tag and UTF8 encoding
+    opts.concurrent         = 0;
 
 #if defined(WIN32) || defined(_WIN32)
     signal(SIGINT, handle_sigint);
@@ -588,6 +591,38 @@ int read_config()
     
 } // end read_config
 
+void show_options()
+{
+    fwprintf(stdout, L"Options received:\n");
+    fwprintf(stdout, L"\tInput -i (iso or connection)%s\n", opts.input_device);
+    if(opts.output_dir !=NULL) fwprintf(stdout, L"\tOutput folder -o %s\n", opts.output_dir);
+    if(opts.output_dir_conc !=NULL) fwprintf(stdout, L"\tOutput folder for concurent -y %s\n", opts.output_dir_conc);
+    if(opts.print != 0)fwprintf(stdout, L"\tPrint details of album -P \n");
+    if(opts.two_channel != 0)fwprintf(stdout, L"\t Asked two channels -2 \n");
+    if(opts.multi_channel != 0)fwprintf(stdout, L"\t Asked multi channels -m \n");
+    if(opts.output_dsf != 0)fwprintf(stdout, L"\t Asked dsf -s \n");
+    if(opts.output_dsdiff != 0)fwprintf(stdout, L"\t Asked dsddif -p \n");
+    if(opts.output_dsdiff_em != 0)fwprintf(stdout, L"\t Asked dsf -e \n");
+    if(opts.dsf_nopad  != 0)fwprintf(stdout, L"\t Asked dsf nopad -z \n");
+    if(opts.output_iso != 0)fwprintf(stdout, L"\t Asked ISO -I \n");
+    if(opts.convert_dst != 0)fwprintf(stdout, L"\t Asked for DST decompression -c \n");
+    if(opts.export_cue_sheet != 0)fwprintf(stdout, L"\t Asked for cuesheet+xml metadata -C \n");
+    if(opts.concurrent != 0)fwprintf(stdout, L"\t Asked for concurrent -w \n");
+
+    if(opts.select_tracks > 0) 
+    {
+        fwprintf(stdout, L"\t%d Tracks selected: -t:",opts.select_tracks);
+        for (int j=0;j< opts.select_tracks; j++ )
+        {
+            if(opts.selected_tracks[j] == 0x01)
+             fwprintf(stdout, L" %d", j+1);
+        }
+        
+    }
+
+
+}
+
 
 
 //   Creates directory tree like: Album title (\ (Disc no.. )\ Stereo (or Multich)
@@ -607,21 +642,25 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
 
 	char *path_output;
     char *album_path = get_path_disc_album(handle,opts.artist_flag);
+    size_t album_path_len;
+    size_t base_output_dir_len;
 	
 	if(album_path==NULL)return NULL;
+
+    album_path_len = strlen(album_path);
 	
 	if(base_output_dir !=NULL)
 	{
-      size_t size_base_output_dir =   strlen(base_output_dir);
-      path_output = calloc(size_base_output_dir + 1 + strlen(album_path) + 20, sizeof(char));
-      strncpy(path_output, base_output_dir, size_base_output_dir);
-      if (base_output_dir[size_base_output_dir-1] != '/' && base_output_dir[size_base_output_dir-1] != '\\')
+      base_output_dir_len =  strlen(base_output_dir);
+      path_output = calloc(base_output_dir_len + 1 + album_path_len + 20, sizeof(char));
+      strncpy(path_output, base_output_dir,base_output_dir_len);
+      if (base_output_dir[base_output_dir_len-1] != '/' && base_output_dir[base_output_dir_len-1] != '\\')
           strncat(path_output, PATH_TRAILING_SLASH, 1);
 	}
 	else
-	  path_output = calloc(strlen(album_path) + 20, sizeof(char));
+	  path_output = calloc(album_path_len + 20, sizeof(char));
 
-    strncat(path_output, album_path, strlen(album_path));
+    strncat(path_output, album_path, album_path_len);
     free(album_path);
 
     if (has_multi_channel(handle))
@@ -722,20 +761,23 @@ char * return_current_directory()
         }
         fwprintf(stdout, L"\nsacd_extract client " SACD_RIPPER_VERSION_STRING "\n");
         fwprintf(stdout, L"\nEnhanced by euflo ....starting!\n");
+
+        int exist_cfg = read_config();
+        init_logging(opts.logging); //init_logging(0); 1= write logs in a file
+
+        show_options();
+
         // Get the current (working) directory:
         char *buffer;
         if ((buffer = return_current_directory() ) != NULL)   
         {
-            char *wide_filename;
+            wchar_t *wide_filename;
             CHAR2WCHAR(wide_filename, buffer);
-            fwprintf(stdout, L"\nCurrent (working) directory (for the app and 'sacd_extract.cfg' file): %ls\n", (wchar_t *)wide_filename);
+            fwprintf(stdout, L"\nCurrent (working) directory (for the app and 'sacd_extract.cfg' file): %ls\n",wide_filename);
             free(wide_filename);
             free(buffer);
         }
 
-
-        int exist_cfg = read_config();
-        init_logging(opts.logging); //init_logging(0); 1= write logs in a file
 
         LOG(lm_main, LOG_NOTICE, ("sacd_extract Version: %s  ", SACD_RIPPER_VERSION_STRING));
 
@@ -882,12 +924,13 @@ char * return_current_directory()
 
                     if (ret_mkdir != 0)
                     {
+                        LOG(lm_main, LOG_ERROR, ("ERROR in main: exporting XML, after recursive_mkdir...output_dir: %s; ret=%d;", output_dir, ret_mkdir));
                         free(album_filename);
                         free(output_dir);
                         scarletbook_close(handle);
                         sacd_close(sacd_reader);
                         exit_main_flag = -1;
-                        LOG(lm_main, LOG_ERROR, ("ERROR in main: exporting XML, after recursive_mkdir...output_dir: %s; ret=%d;", output_dir, ret_mkdir));
+                        
                         goto exit_main;
                     }
 
@@ -936,12 +979,13 @@ char * return_current_directory()
 
                         if (ret_mkdir != 0)
                         {
+                            LOG(lm_main, LOG_ERROR, ("ERROR in main: ISO, after recursive_mkdir...output_dir: %s; ret=%d;", output_dir, ret_mkdir));
                             free(album_filename);
                             free(output_dir);
                             scarletbook_close(handle);
                             sacd_close(sacd_reader);
                             exit_main_flag=-1;
-                            LOG(lm_main, LOG_ERROR, ("ERROR in main: ISO, after recursive_mkdir...output_dir: %s; ret=%d;", output_dir, ret_mkdir));
+                            
                             goto exit_main;
                         }
                     }
