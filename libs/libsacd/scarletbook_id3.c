@@ -28,6 +28,7 @@
 #include <charset.h>
 
 #include "scarletbook.h"
+#include <logging.h>
 
 #include "id3.h"
 #include <genre.dat>
@@ -199,7 +200,8 @@ int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, in
         }
 
         // ISCR
-        if (&handle->area[area].area_isrc_genre->isrc[track])
+        isrc_t isrc_st = handle->area[area].area_isrc_genre->isrc[track];
+        if ((isrc_st.country_code[0] != 0x0) || (isrc_st.owner_code[0] != 0x0) || (isrc_st.designation_code[0] !=0x0) || (isrc_st.recording_year[0] != 0x0) )
         {
             char isrc[16];
             
@@ -212,6 +214,16 @@ int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, in
             frame = id3_add_frame(tag, ID3_TSRC);
 
             id3_set_text_wraper(frame, isrc, handle->id3_tag_mode);
+            
+            // DEBUG
+            // char isrc_str[100];
+           
+            // LOG(lm_main, LOG_NOTICE, ("ISRC Track=%d; id3_add_frame(.., ID3_TSRC), id3_set_text_wraper()",track));
+            // LOG(lm_main, LOG_NOTICE, ("Country: %c%c",isrc_st.country_code[0],isrc_st.country_code[1] ));
+            // LOG(lm_main, LOG_NOTICE, ("Owner: %c%c%c ",isrc_st.owner_code[0],isrc_st.owner_code[1],isrc_st.owner_code[2] ));
+            // LOG(lm_main, LOG_NOTICE, ("Year: %c%c",isrc_st.recording_year[0],isrc_st.recording_year[1] ));
+            // snprintf(isrc_str,100, "Designation: 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X \n", isrc_st.designation_code[0],isrc_st.designation_code[1],isrc_st.designation_code[2],isrc_st.designation_code[3],isrc_st.designation_code[4]);
+            // LOG(lm_main, LOG_NOTICE, ("%s",isrc_str ));
             
         }
         // Publisher
