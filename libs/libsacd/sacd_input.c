@@ -369,7 +369,11 @@ static sacd_input_t sacd_net_input_open(const char *target)
                           atoi(strchr(target, ':') + 1), &tm);
     if (err)
     {
-        fprintf(stderr, "Failed to connect\n");
+        fprintf(stderr, "Failed to connect: %s\n", err);
+
+        LOG(lm_main, LOG_ERROR, ("sacd_net_input_open(target=%s); Failed to connect! error=(%s)",target,err));
+        LOG(lm_main, LOG_ERROR, ("sacd_net_input_open(); address=%s, port=%d",substr(target, 0, strchr(target, ':') - target),atoi(strchr(target, ':') + 1)));
+        
         goto error;
     }
     socket_setblocking((p_socket)&dev->fd);
