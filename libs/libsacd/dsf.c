@@ -225,7 +225,7 @@ static int dsf_close(scarletbook_output_format_t *ft)
     {
         if(sb_handle->concatenate ==0)
         {
-            for (i = 0; i < handle->channel_count; i++)
+            for (i = 0; i < ((handle->channel_count > MAX_CHANNEL_COUNT)? (MAX_CHANNEL_COUNT):(handle->channel_count)); i++)
             {
                 // if it exists some data in buffers then copy it in a special buffers for use in next track
                 if (handle->buffer_ptr[i] > handle->buffer[i])
