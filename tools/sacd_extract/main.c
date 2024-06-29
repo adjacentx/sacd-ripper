@@ -594,7 +594,8 @@ int read_config()
 void show_options()
 {
     fwprintf(stdout, L"Options received:\n");
-    fwprintf(stdout, L"\tInput -i (iso or connection)%s\n", opts.input_device);
+    
+    if(opts.input_device != NULL)fwprintf(stdout, L"\tInput -i (iso or connection)%s\n", opts.input_device);
     if(opts.output_dir !=NULL) fwprintf(stdout, L"\tOutput folder -o %s\n", opts.output_dir);
     if(opts.output_dir_conc !=NULL) fwprintf(stdout, L"\tOutput folder for concurent -y %s\n", opts.output_dir_conc);
     if(opts.print != 0)fwprintf(stdout, L"\tPrint details of album -P \n");
