@@ -612,8 +612,8 @@ void show_options()
 
     if(opts.select_tracks > 0) 
     {
-        fwprintf(stdout, L"\t%d Tracks selected: -t:",opts.select_tracks);
-        for (int j=0;j< opts.select_tracks; j++ )
+        fwprintf(stdout, L"\tTracks selected: -t:");
+        for (int j=0;j< 255; j++ )
         {
             if(opts.selected_tracks[j] == 0x01)
              fwprintf(stdout, L" %d", j+1);
@@ -624,7 +624,7 @@ void show_options()
 
 }
 
-
+#define MAX_PATH_OUTPUT_SIZE 16384U
 
 //   Creates directory tree like: Album title (\ (Disc no.. )\ Stereo (or Multich)
 //   Useful for dsf, dff files.
@@ -641,10 +641,10 @@ char PATH_TRAILING_SLASH[2]= {'\\','\0'};
 char PATH_TRAILING_SLASH[2] = {'/', '\0'};
 #endif
 
-	char *path_output;
+    char *path_output;
     char *album_path = get_path_disc_album(handle,opts.artist_flag);
     size_t album_path_len;
-    size_t base_output_dir_len;
+    size_t path_output_size = MAX_PATH_OUTPUT_SIZE;
 	
 	if(album_path==NULL)return NULL;
 
@@ -652,21 +652,47 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
 	
 	if(base_output_dir !=NULL)
 	{
-      base_output_dir_len =  strlen(base_output_dir);
-      path_output = calloc(base_output_dir_len + 1 + album_path_len + 20, sizeof(char));
-      strncpy(path_output, base_output_dir,base_output_dir_len);
-      if (base_output_dir[base_output_dir_len-1] != '/' && base_output_dir[base_output_dir_len-1] != '\\')
-          strncat(path_output, PATH_TRAILING_SLASH, 1);
+      size_t base_output_dir_len;
+
+      base_output_dir_len =  min(strlen(base_output_dir), MAX_PATH_OUTPUT_SIZE/2);
+      path_output_size = min(base_output_dir_len + 1 + album_path_len + 20, MAX_PATH_OUTPUT_SIZE - 1 );
+      path_output = calloc(path_output_size, sizeof(char));
+
+      if(path_output != NULL)
+      {
+
+        strcpy(path_output, base_output_dir);
+
+    #if defined(WIN32) || defined(_WIN32)      
+        if (base_output_dir[base_output_dir_len-1] != '\\')
+    #else
+        if (base_output_dir[base_output_dir_len-1] != '/' )
+    #endif      
+            strcat(path_output, PATH_TRAILING_SLASH);
+
+        if( base_output_dir_len + 1 + album_path_len < path_output_size)
+            strncat(path_output, album_path, album_path_len);
+      }
+
 	}
 	else
-	  path_output = calloc(album_path_len + 20, sizeof(char));
+    {
+      path_output_size = min(album_path_len + 20, MAX_PATH_OUTPUT_SIZE);
+	  path_output = calloc(path_output_size, sizeof(char));
 
-    strncat(path_output, album_path, album_path_len);
+      if(path_output != NULL)
+      {
+        strcat(path_output, album_path);
+      }
+
+    }
+
+ 
     free(album_path);
 
     if (has_multi_channel(handle))
     {
-        strncat(path_output, PATH_TRAILING_SLASH, 1);
+        strcat(path_output, PATH_TRAILING_SLASH);
         strcat(path_output, get_speaker_config_string(handle->area[area_idx].area_toc));
     }
 
@@ -895,7 +921,7 @@ char * return_current_directory()
                     fwprintf(stdout, L"\nWarning: the reported size (sectors) of sacd is not ok (sectors=%u) < (max_sectors=%u) !\n", total_sectors, max_sectors);
                 }
 
-                // genereate the main output folder
+                // generate the main output folder
 #if defined(WIN32) || defined(_WIN32)
                 char PATH_TRAILING_SLASH[2] = {'\\', '\0'};
 #else
@@ -903,18 +929,45 @@ char * return_current_directory()
 #endif
                 char *album_path = get_path_disc_album(handle, opts.artist_flag);
                 char *output_dir;
+                size_t album_path_size;
+                size_t output_dir_size;
+
+                album_path_size = strlen(album_path);
+
                 if (opts.output_dir != NULL)
                 {
-                    size_t size_output_dir = strlen(opts.output_dir);
-                    output_dir = calloc(size_output_dir + 1 + strlen(album_path) + 1, sizeof(char));
-                    strncpy(output_dir, opts.output_dir, size_output_dir);
-                    if (opts.output_dir[size_output_dir - 1] != '/' && opts.output_dir[size_output_dir - 1] != '\\')
-                        strncat(output_dir, PATH_TRAILING_SLASH, 1);
+                    size_t size_opt_output_dir = strlen(opts.output_dir);
+
+                    output_dir_size = min(size_opt_output_dir + 1 + album_path_size + 1, MAX_PATH_OUTPUT_SIZE -1);
+                    output_dir = calloc(output_dir_size, sizeof(char));
+
+                    if(output_dir !=NULL)
+                    {
+
+                    strcpy(output_dir, opts.output_dir);
+
+                     
+                    #if defined(WIN32) || defined(_WIN32)
+                        if (opts.output_dir[size_opt_output_dir - 1] != '\\')
+                    #else
+                        if (opts.output_dir[size_opt_output_dir - 1] != '/') 
+                    #endif
+                            strcat(output_dir, PATH_TRAILING_SLASH);
+
+                        if( album_path_size + size_opt_output_dir + 1 < output_dir_size)
+                            strncat(output_dir, album_path, album_path_size);
+                    }     
+
                 }
                 else
-                    output_dir = calloc(strlen(album_path) + 1, sizeof(char));
+                {
+                    output_dir_size = min(album_path_size + 1, MAX_PATH_OUTPUT_SIZE);
+                    output_dir = calloc(output_dir_size, sizeof(char));
+                    if(output_dir != NULL)
+                      strcat(output_dir, album_path);
+                }
 
-                strncat(output_dir, album_path, strlen(album_path));
+
                 free(album_path);
                 LOG(lm_main, LOG_NOTICE, ("NOTICE in main: after get_path_disc_album()...output_dir: %s", output_dir));
 
