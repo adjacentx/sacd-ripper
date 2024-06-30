@@ -137,7 +137,7 @@ static void scarletbook_print_master_toc(scarletbook_handle_t *handle)
     scarletbook_print_disc_text(handle);
 
     fwprintf(stdout, L"\nAlbum Information:\n");
-    if (mtoc->disc_catalog_number[0] != '\0')
+    if (mtoc->album_catalog_number[0] != '\0')
     {
         strncpy(tmp_str, mtoc->album_catalog_number, 16);
         tmp_str[16] = '\0';
