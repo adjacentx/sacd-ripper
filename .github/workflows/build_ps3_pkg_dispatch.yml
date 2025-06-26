@@ -10,15 +10,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Login to GHCR
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | \
-            docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-
       - name: Build SACD-Ripper PKG
         run: |
           docker run --rm -v "${{ github.workspace }}":/workspace \
-            ghcr.io/ps3toolchain/ps3toolchain:latest \
+            docker.io/ps3dev/ps3toolchain:latest \
             make ps3_pkg
 
       - name: Upload PKG
