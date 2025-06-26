@@ -1,0 +1,24 @@
+name: Build PS3 PKG
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v3
+
+      - name: Build SACD-Ripper PKG
+        run: |
+          docker run --rm -v "${{ github.workspace }}":/workspace \
+            ghcr.io/ps3toolchain/ps3toolchain:latest \
+            make ps3_pkg
+
+      - name: Upload PKG artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: SACD_Ripper_v0.40_fix5_(HEN).pkg
+          path: pkg/SACD_Ripper.pkg
