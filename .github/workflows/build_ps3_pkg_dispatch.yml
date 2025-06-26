@@ -8,10 +8,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - run: |
+
+     - name: Login to GHCR
+       run: echo "${{ secrets.GITHUB_TOKEN }}" | \
+            docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Build SACD-Ripper PKG
+        run: |
           docker run --rm -v "${{ github.workspace }}":/workspace \
             ghcr.io/ps3toolchain/ps3toolchain:latest \
             make ps3_pkg
+
       - uses: actions/upload-artifact@v4
         with:
           name: SACD_Ripper_v0.40_fix5_(HEN).pkg
