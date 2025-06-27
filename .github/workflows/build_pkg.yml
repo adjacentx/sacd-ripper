@@ -6,6 +6,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
+
     steps:
     - name: Checkout source
       uses: actions/checkout@v4
@@ -21,26 +22,26 @@ jobs:
 
     - name: Build PS3 toolchain
       run: |
-        export PS3DEV=/usr/local/ps3dev
+        export PS3DEV=$HOME/ps3dev
         mkdir -p "$PS3DEV"
-        cd $GITHUB_WORKSPACE
         git clone https://github.com/ps3dev/ps3toolchain.git
         cd ps3toolchain
-        ./toolchain.sh --prefix=/usr/local/ps3dev
+        ./toolchain.sh -- --prefix="$PS3DEV"
 
     - name: Install PSL1GHT
       run: |
-        cd $GITHUB_WORKSPACE
+        export PS3DEV=$HOME/ps3dev
+        export PSL1GHT=$PS3DEV
         git clone https://github.com/PS3Dev/PSL1GHT.git
         cd PSL1GHT
-        export PS3DEV=/usr/local/ps3dev
         make install-ctrl
         make
-        sudo make install
+        make install
 
     - name: Build SACD-Ripper PKG
       run: |
-        cd $GITHUB_WORKSPACE
+        export PS3DEV=$HOME/ps3dev
+        export PSL1GHT=$PS3DEV
         git clone https://github.com/EuFlo/sacd-ripper.git
         cd sacd-ripper
         make ps3_pkg
