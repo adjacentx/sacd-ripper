@@ -46,7 +46,7 @@ jobs:
         make ps3_pkg
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: SACD_Ripper.pkg
         path: sacd-ripper/pkg/SACD_Ripper.pkg
