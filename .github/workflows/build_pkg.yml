@@ -50,8 +50,17 @@ jobs:
         export PS3DEV="$HOME/ps3dev"
         export PSL1GHT="$PS3DEV"
         export PATH="$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin:$PATH"
-        git clone --depth=1 --branch 0.3.9.3 https://github.com/sacd-ripper/sacd-ripper.git sacd-ripper
+
+        # Clone upstream sacd-ripper with submodules so all PS3 libraries are included
+        git clone --depth=1 --branch 0.3.9.3 --recursive \
+          https://github.com/sacd-ripper/sacd-ripper.git sacd-ripper
         cd sacd-ripper
+
+        # Build all libraries and ELF
+        make clean
+        make
+
+        # Package into PS3 .pkg
         make sacd-ripper.pkg
 
     - name: Upload artifact
