@@ -1,0 +1,52 @@
+name: Build SACD-Ripper PKG
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Checkout source
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+          build-essential autoconf automake libtool libtool-bin pkg-config \
+          libgmp-dev libmpfr-dev libmpc-dev libelf-dev zlib1g-dev \
+          python3 python3-dev python-is-python3 python3-distutils \
+          texinfo wget git bzip2 flex bison libncurses-dev m4
+
+    - name: Build PS3 toolchain
+      run: |
+        export PS3DEV=/usr/local/ps3dev
+        mkdir -p "$PS3DEV"
+        cd $GITHUB_WORKSPACE
+        git clone https://github.com/ps3dev/ps3toolchain.git
+        cd ps3toolchain
+        ./toolchain.sh --prefix=/usr/local/ps3dev
+
+    - name: Install PSL1GHT
+      run: |
+        cd $GITHUB_WORKSPACE
+        git clone https://github.com/PS3Dev/PSL1GHT.git
+        cd PSL1GHT
+        export PS3DEV=/usr/local/ps3dev
+        make install-ctrl
+        make
+        sudo make install
+
+    - name: Build SACD-Ripper PKG
+      run: |
+        cd $GITHUB_WORKSPACE
+        git clone https://github.com/EuFlo/sacd-ripper.git
+        cd sacd-ripper
+        make ps3_pkg
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: SACD_Ripper.pkg
+        path: sacd-ripper/pkg/SACD_Ripper.pkg
