@@ -23,6 +23,8 @@ jobs:
     - name: Build PS3 toolchain
       run: |
         export PS3DEV=$HOME/ps3dev
+        export PSL1GHT=$PS3DEV
+        export PATH="$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin:$PATH"
         mkdir -p "$PS3DEV"
         git clone https://github.com/ps3dev/ps3toolchain.git
         cd ps3toolchain
@@ -32,6 +34,7 @@ jobs:
       run: |
         export PS3DEV=$HOME/ps3dev
         export PSL1GHT=$PS3DEV
+        export PATH="$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin:$PATH"
         git clone https://github.com/PS3Dev/PSL1GHT.git
         cd PSL1GHT
         make install-ctrl
@@ -42,6 +45,7 @@ jobs:
       run: |
         export PS3DEV=$HOME/ps3dev
         export PSL1GHT=$PS3DEV
+        export PATH="$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin:$PATH"
         git clone https://github.com/EuFlo/sacd-ripper.git
         cd sacd-ripper
         make ps3_pkg
